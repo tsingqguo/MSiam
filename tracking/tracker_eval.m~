@@ -36,7 +36,9 @@ function [newTargetPosition, bestScale,bestPeak] = tracker_eval(net_x, net_off,s
     
     %% testing xcorr on OFF
     if~isempty(zt_features)
-        xt_features = net_x.vars(net_x.getVarIndex('b_feat')).value(:,:,:,bestScale);  
+
+        xt_features = net_x.vars(net_x.getVarIndex('b_feat')).value(:,:,:,bestScale);
+        
         net_off.eval({'z1',z_features(:,:,:,bestScale),'zt',zt_features(:,:,:,bestScale),'x1',x_features(:,:,:,bestScale),'xt',xt_features});
         responseMaps_off = net_off.vars(net_off.getVarIndex('score')).value;
         responseMapsUP_off = gpuArray(single(zeros(p.scoreSize*p.responseUp, p.scoreSize*p.responseUp, 1)));

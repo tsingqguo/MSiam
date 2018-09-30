@@ -1,9 +1,9 @@
 % -------------------------------------------------------------------------------------------------------------------------
 classdef Off < dagnn.Layer
-%XCORR
+% OFF
 %   Crosscorrelates two activations of different size exploiting  the API of vl_nnconv
 %
-%   Luca Bertinetto, Jack Valmadre, Joao F. Henriques, 2016
+%   Qing Guo, 2018
 % -------------------------------------------------------------------------------------------------------------------------
     properties
         iscrop = false
@@ -14,8 +14,8 @@ classdef Off < dagnn.Layer
         function outputs = forward(obj, inputs, params)
             assert(numel(inputs) == 2, 'two inputs are needed');
 
-            x1 = inputs{2}; % instance t-1
-            x2 = inputs{1}; % instance t
+            x1 = inputs{1}; % instance t-1
+            x2 = inputs{2}; % instance t
 
             assert(size(x1,1) == size(x2,1), 'x1 and x2 have the same size');
             sobelx = repmat(single([-1 0 1; -1 0 1;-1 0 1]),1,1,1,size(x1,3));

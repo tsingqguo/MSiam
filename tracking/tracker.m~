@@ -78,7 +78,7 @@ function [bboxes, fps ]= tracker(varargin)
     remove_layers_from_prefix(net_x, p.prefix_z);
     zFeatId = net_z.getVarIndex(p.id_feat_z);
     scoreId = net_x.getVarIndex(p.id_score);
-    net_x.vars(net_x.getVarIndex('b_feat')).precious = 1;
+
     % create sub-network for off siamese 
     net_off = make_offsiam();
     
@@ -109,7 +109,7 @@ function [bboxes, fps ]= tracker(varargin)
     pad = d_search/scale_z;
     s_x = s_z + 2*pad;
     % initialize the instance at first frame
-    [x_crop, ~] = get_subwindow_tracking(im, targetPosition, [p.instanceSize p.instanceSize], [round(s_x) round(s_x)], avgChans);
+    [x_crop, ~] = get_subwindow_tracking(im, targetPosition, [p.in p.exemplarSize], [round(s_z) round(s_z)], avgChans);
     if p.subMean
         x_crop = bsxfun(@minus, x_crop, reshape(stats.z.rgbMean, [1 1 3]));
     end
@@ -130,11 +130,8 @@ function [bboxes, fps ]= tracker(varargin)
     net_z.eval({'exemplar', z_crop});
     z_features = net_z.vars(zFeatId).value;
     z_features = repmat(z_features, [1 1 1 p.numScale]);
-    % evaluate the offline-trained network for instance x features
-    net_z.eval({'exemplar', x_crop});
-    x_features = net_z.vars(zFeatId).value;
-    x_features = repmat(x_features, [1 1 1 p.numScale]);
-    zt_features = [];
+
+    
     bboxes = zeros(nImgs, 4);
     
     % start tracking
@@ -154,29 +151,15 @@ function [bboxes, fps ]= tracker(varargin)
             
             %% locate target with siamfc
             % evaluate the offline-trained network for exemplar x features
-            [newTargetPosition, newScale,~] = tracker_eval(net_x,net_off,round(s_x),scoreId,z_features,zt_features,x_features,x_crops, targetPosition, window,p);
+            [newTargetPosition, newScale] = tracker_eval(net_x, round(s_x), scoreId, z_features, x_crops, targetPosition, window,p);
             targetPosition = gather(newTargetPosition);
             % scale damping and saturation
             s_x = max(min_s_x, min(max_s_x, (1-p.scaleLR)*s_x + p.scaleLR*scaledInstance(newScale)));
             targetSize = (1-p.scaleLR)*targetSize + p.scaleLR*[scaledTarget(1,newScale) scaledTarget(2,newScale)];
-            
-            %% calculate zt_features
-            wc_z = targetSize(2) + p.contextAmount*sum(targetSize);
-            hc_z = targetSize(1) + p.contextAmount*sum(targetSize);
-            s_z = sqrt(wc_z*hc_z);
-            % initialize the exemplar
-            [z_crop, ~] = get_subwindow_tracking(im, targetPosition, [p.exemplarSize p.exemplarSize], [round(s_z) round(s_z)], avgChans);
-            if p.subMean
-                z_crop = bsxfun(@minus, z_crop, reshape(stats.z.rgbMean, [1 1 3]));
-            end
-            % evaluate the offline-trained network for exemplar z features
-            net_z.eval({'exemplar', z_crop});
-            zt_features = net_z.vars(zFeatId).value;
-            zt_features = repmat(zt_features, [1 1 1 p.numScale]);
         else
             % at the first frame output position and size passed as input (ground truth)
         end
-        
+
         rectPosition = [targetPosition([2,1]) - targetSize([2,1])/2, targetSize([2,1])];
         % output bbox in the original frame coordinates
         oTargetPosition = targetPosition; % .* frameSize ./ newFrameSize;

@@ -1,0 +1,6 @@
+function  net = make_offsiam(p)
+
+net = dagnn.DagNN();
+net.addLayer(off_x,)
+
+end
